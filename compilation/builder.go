@@ -24,9 +24,9 @@ func BuildRestQL(ctx context.Context, pluginsInfo []string, output string) error
 var pluginInfoRegex = regexp.MustCompile("([^@=]+)@?([^=]*)=?(.*)")
 
 type Plugin struct {
-	ModuleName string
-	Version string
-	Replace string
+	ModulePath string
+	Version    string
+	Replace    string
 }
 
 func ParsePluginInfo(pluginInfo string) Plugin {
@@ -43,7 +43,7 @@ func ParsePluginInfo(pluginInfo string) Plugin {
 	submatches := matches[0]
 	if len(submatches) >= 2 {
 		mn := submatches[1]
-		p.ModuleName = mn
+		p.ModulePath = mn
 	}
 
 	if len(submatches) >= 3 {

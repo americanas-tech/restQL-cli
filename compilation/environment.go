@@ -12,6 +12,11 @@ import (
 	"time"
 )
 
+const (
+	restqlModulePath = "github.com/b2wdigital/restQL-golang"
+	restqlModuleVersion = ""
+)
+
 const mainFileTemplate = `
 package main
 
@@ -64,6 +69,11 @@ func (e *Environment) Setup(ctx context.Context) error {
 		return err
 	}
 
+	err = e.setupDependenciesVersions(ctx)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -98,8 +108,8 @@ func (e *Environment) setupDependenciesReplacements(ctx context.Context) error {
 			continue
 		}
 
-		LogInfo("Replace dependency %s => %s", plugin.ModuleName, plugin.Replace)
-		replaceArg := fmt.Sprintf("%s=%s", plugin.ModuleName, plugin.Replace)
+		LogInfo("Replace dependency %s => %s", plugin.ModulePath, plugin.Replace)
+		replaceArg := fmt.Sprintf("%s=%s", plugin.ModulePath, plugin.Replace)
 
 		cmd := e.newCommand("go", "mod", "edit", "-replace", replaceArg)
 		err := e.runCommand(ctx, cmd, 1*time.Second)
@@ -109,6 +119,32 @@ func (e *Environment) setupDependenciesReplacements(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (e *Environment) setupDependenciesVersions(ctx context.Context) error {
+	LogInfo("Pinning versions")
+	err := e.execGoGet(ctx, restqlModulePath, restqlModuleVersion)
+	if err != nil {
+		return err
+	}
+
+	for _, plugin := range e.plugins {
+		err := e.execGoGet(ctx, plugin.ModulePath, plugin.Version)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (e *Environment) execGoGet(ctx context.Context, modulePath, moduleVersion string) error {
+	mod := modulePath
+	if moduleVersion != "" {
+		mod += "@" + moduleVersion
+	}
+	cmd := e.newCommand("go", "get", "-d", "-v", mod)
+	return e.runCommand(ctx, cmd, 0)
 }
 
 func (e *Environment) newCommand(command string, args ...string) *exec.Cmd {
@@ -154,7 +190,7 @@ func (e *Environment) runCommand(ctx context.Context, cmd *exec.Cmd, timeout tim
 func parseMainFileTemplate(e *Environment) ([]byte, error) {
 	p := make([]string, len(e.plugins))
 	for i, plugin := range e.plugins {
-		p[i] = plugin.ModuleName
+		p[i] = plugin.ModulePath
 	}
 
 	templateContext := mainFileTemplateContext{Plugins: p}
