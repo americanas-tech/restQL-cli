@@ -1,28 +1,29 @@
 package compilation
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 )
 
-func BuildRestQL(pluginsInfo []string, output string) error {
+func BuildRestQL(ctx context.Context, pluginsInfo []string, output string) error {
 	plugins := make([]Plugin, len(pluginsInfo))
 	for i, pi := range pluginsInfo {
 		plugins[i] = ParsePluginInfo(pi)
 	}
 
 	env := NewEnvironment(plugins)
-	err := env.Setup()
+	err := env.Setup(ctx)
 	if err != nil {
 		return err
 	}
-	defer env.Clean()
+	//defer env.Clean()
 
 	fmt.Printf("Build restql with: %v, to output: %s\n", pluginsInfo, output)
 	return nil
 }
 
-var pluginInfoRegex = regexp.MustCompile("([^@]+)@?([^=]*)=?(.*)")
+var pluginInfoRegex = regexp.MustCompile("([^@=]+)@?([^=]*)=?(.*)")
 
 type Plugin struct {
 	ModuleName string

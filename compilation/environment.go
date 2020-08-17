@@ -2,11 +2,15 @@ package compilation
 
 import (
 	"bytes"
+	"context"
+	"fmt"
 	"html/template"
 	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"time"
 )
 
 const mainFileTemplate = `
@@ -39,7 +43,7 @@ func (e *Environment) Clean() error {
 	return os.RemoveAll(e.tempDir)
 }
 
-func (e *Environment) Setup() error {
+func (e *Environment) Setup(ctx context.Context) error {
 	tempDir, err := ioutil.TempDir("", "restql-compiling-*")
 	if err != nil {
 		return err
@@ -47,6 +51,16 @@ func (e *Environment) Setup() error {
 	e.tempDir = tempDir
 
 	err = e.setupMainFile()
+	if err != nil {
+		return err
+	}
+
+	err = e.setupGoMod(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = e.setupDependenciesReplacements(ctx)
 	if err != nil {
 		return err
 	}
@@ -66,6 +80,77 @@ func (e *Environment) setupMainFile() error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func (e *Environment) setupGoMod(ctx context.Context) error {
+	cmd := e.newCommand("go", "mod", "init", "restql")
+	err := e.runCommand(ctx, cmd, 1*time.Second)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+
+func (e *Environment) newCommand(command string, args ...string) *exec.Cmd {
+	cmd := exec.Command(command, args...)
+	cmd.Dir = e.tempDir
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd
+}
+
+func (e *Environment) runCommand(ctx context.Context, cmd *exec.Cmd, timeout time.Duration) error {
+	log.Printf("[INFO] exec (timeout=%s): %+v ", timeout, cmd)
+
+	if timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, timeout)
+		defer cancel()
+	}
+
+	err := cmd.Start()
+	if err != nil {
+		return err
+	}
+
+	cmdErrChan := make(chan error)
+	go func() {
+		cmdErrChan <- cmd.Wait()
+	}()
+
+	select {
+	case cmdErr := <-cmdErrChan:
+		return cmdErr
+	case <-ctx.Done():
+		select {
+		case <-time.After(15 * time.Second):
+			cmd.Process.Kill()
+		case <-cmdErrChan:
+		}
+		return ctx.Err()
+	}
+}
+
+func (e *Environment) setupDependenciesReplacements(ctx context.Context) error {
+	log.Printf("[INFO] plugins: %+#v", e.plugins)
+	for _, plugin := range e.plugins {
+		if plugin.Replace == "" {
+			continue
+		}
+
+		log.Printf("[INFO] Replace %s => %s\n", plugin.ModuleName, plugin.Replace)
+		replaceArg := fmt.Sprintf("%s=%s", plugin.ModuleName, plugin.Replace)
+
+		cmd := e.newCommand("go", "mod", "edit", "-replace", replaceArg)
+		err := e.runCommand(ctx, cmd, 1*time.Second)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
