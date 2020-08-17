@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"html/template"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -75,7 +74,7 @@ func (e *Environment) setupMainFile() error {
 	}
 
 	mainFilePath := filepath.Join(e.tempDir, "main.go")
-	log.Printf("[INFO] Writing main file to: %s\n", mainFilePath)
+	LogInfo("Writing main file to: %s", mainFilePath)
 	err = ioutil.WriteFile(mainFilePath, mainFileContent, 0644)
 	if err != nil {
 		return err
@@ -93,6 +92,24 @@ func (e *Environment) setupGoMod(ctx context.Context) error {
 	return nil
 }
 
+func (e *Environment) setupDependenciesReplacements(ctx context.Context) error {
+	for _, plugin := range e.plugins {
+		if plugin.Replace == "" {
+			continue
+		}
+
+		LogInfo("Replace dependency %s => %s", plugin.ModuleName, plugin.Replace)
+		replaceArg := fmt.Sprintf("%s=%s", plugin.ModuleName, plugin.Replace)
+
+		cmd := e.newCommand("go", "mod", "edit", "-replace", replaceArg)
+		err := e.runCommand(ctx, cmd, 1*time.Second)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
 
 func (e *Environment) newCommand(command string, args ...string) *exec.Cmd {
 	cmd := exec.Command(command, args...)
@@ -103,7 +120,7 @@ func (e *Environment) newCommand(command string, args ...string) *exec.Cmd {
 }
 
 func (e *Environment) runCommand(ctx context.Context, cmd *exec.Cmd, timeout time.Duration) error {
-	log.Printf("[INFO] exec (timeout=%s): %+v ", timeout, cmd)
+	LogInfo("Executing command (timeout=%s): %+v", timeout, cmd)
 
 	if timeout > 0 {
 		var cancel context.CancelFunc
@@ -132,26 +149,6 @@ func (e *Environment) runCommand(ctx context.Context, cmd *exec.Cmd, timeout tim
 		}
 		return ctx.Err()
 	}
-}
-
-func (e *Environment) setupDependenciesReplacements(ctx context.Context) error {
-	log.Printf("[INFO] plugins: %+#v", e.plugins)
-	for _, plugin := range e.plugins {
-		if plugin.Replace == "" {
-			continue
-		}
-
-		log.Printf("[INFO] Replace %s => %s\n", plugin.ModuleName, plugin.Replace)
-		replaceArg := fmt.Sprintf("%s=%s", plugin.ModuleName, plugin.Replace)
-
-		cmd := e.newCommand("go", "mod", "edit", "-replace", replaceArg)
-		err := e.runCommand(ctx, cmd, 1*time.Second)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 func parseMainFileTemplate(e *Environment) ([]byte, error) {

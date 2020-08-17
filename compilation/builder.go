@@ -2,7 +2,6 @@ package compilation
 
 import (
 	"context"
-	"fmt"
 	"regexp"
 )
 
@@ -17,9 +16,8 @@ func BuildRestQL(ctx context.Context, pluginsInfo []string, output string) error
 	if err != nil {
 		return err
 	}
-	//defer env.Clean()
+	defer env.Clean()
 
-	fmt.Printf("Build restql with: %v, to output: %s\n", pluginsInfo, output)
 	return nil
 }
 
