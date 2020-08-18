@@ -12,6 +12,11 @@ import (
 	"strings"
 )
 
+const (
+	restqlModulePath = "github.com/b2wdigital/restQL-golang"
+	restqlModuleVersion = ""
+)
+
 func BuildRestQL(ctx context.Context, pluginsInfo []string, output string) error {
 	absOutputFile, err := filepath.Abs(output)
 	if err != nil {
@@ -23,7 +28,7 @@ func BuildRestQL(ctx context.Context, pluginsInfo []string, output string) error
 		plugins[i] = ParsePluginInfo(pi)
 	}
 
-	env := NewEnvironment(plugins)
+	env := NewEnvironment(plugins, restqlModulePath, restqlModuleVersion)
 	err = env.Setup(ctx)
 	if err != nil {
 		return err

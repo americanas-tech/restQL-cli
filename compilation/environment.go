@@ -13,16 +13,11 @@ import (
 	"time"
 )
 
-const (
-	restqlModulePath = "github.com/b2wdigital/restQL-golang"
-	restqlModuleVersion = ""
-)
-
 const mainFileTemplate = `
 package main
 
 import (
-	restqlcmd "github.com/b2wdigital/restQL-golang/cmd"
+	restqlcmd "{{ .RestqlModulePath }}/cmd"
 
 	// add RestQL plugins here
 	{{- range .Plugins}}
@@ -37,11 +32,17 @@ func main() {
 
 type Environment struct {
 	tempDir string
+	restqlModulePath string
+	restqlModuleVersion string
 	plugins []Plugin
 }
 
-func NewEnvironment(plugins []Plugin) *Environment {
-	return &Environment{plugins: plugins}
+func NewEnvironment(plugins []Plugin, restqlModulePath string, restqlModuleVersion string) *Environment {
+	return &Environment{
+		plugins: plugins,
+		restqlModulePath: restqlModulePath,
+		restqlModuleVersion: restqlModuleVersion,
+	}
 }
 
 func (e *Environment) Clean() error {
@@ -109,12 +110,16 @@ func (e *Environment) setupDependenciesReplacements(ctx context.Context) error {
 			continue
 		}
 
-		//TODO: run absolute path of plugin.Replace
+		absReplacePath, err := filepath.Abs(plugin.Replace)
+		if err != nil {
+			return err
+		}
+
 		LogInfo("Replace dependency %s => %s", plugin.ModulePath, plugin.Replace)
-		replaceArg := fmt.Sprintf("%s=%s", plugin.ModulePath, plugin.Replace)
+		replaceArg := fmt.Sprintf("%s=%s", plugin.ModulePath, absReplacePath)
 
 		cmd := e.NewCommand("go", "mod", "edit", "-replace", replaceArg)
-		err := e.RunCommand(ctx, cmd, ioutil.Discard)
+		err = e.RunCommand(ctx, cmd, ioutil.Discard)
 		if err != nil {
 			return err
 		}
@@ -125,14 +130,7 @@ func (e *Environment) setupDependenciesReplacements(ctx context.Context) error {
 
 func (e *Environment) setupDependenciesVersions(ctx context.Context) error {
 	LogInfo("Pinning versions")
-	err := e.execGoGet(ctx, restqlModulePath, restqlModuleVersion)
-	if err != nil {
-		return err
-	}
-
-	replaceArg := fmt.Sprintf("%s=%s", restqlModulePath, devRestqlPath)
-	cmd := e.NewCommand("go", "mod", "edit", "-replace", replaceArg)
-	err = e.RunCommand(ctx, cmd, ioutil.Discard)
+	err := e.execGoGet(ctx, e.restqlModulePath, e.restqlModuleVersion)
 	if err != nil {
 		return err
 	}
@@ -197,7 +195,7 @@ func parseMainFileTemplate(e *Environment) ([]byte, error) {
 		p[i] = plugin.ModulePath
 	}
 
-	templateContext := mainFileTemplateContext{Plugins: p}
+	templateContext := mainFileTemplateContext{Plugins: p, RestqlModulePath: e.restqlModulePath}
 
 	tpl, err := template.New("main").Parse(mainFileTemplate)
 	if err != nil {
@@ -214,5 +212,6 @@ func parseMainFileTemplate(e *Environment) ([]byte, error) {
 }
 
 type mainFileTemplateContext struct {
+	RestqlModulePath string
 	Plugins []string
 }
