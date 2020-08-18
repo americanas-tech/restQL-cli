@@ -136,6 +136,10 @@ func (e *Environment) setupDependenciesVersions(ctx context.Context) error {
 	}
 
 	for _, plugin := range e.plugins {
+		if plugin.Replace != "" {
+			continue
+		}
+
 		err := e.execGoGet(ctx, plugin.ModulePath, plugin.Version)
 		if err != nil {
 			return err
