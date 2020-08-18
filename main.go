@@ -37,7 +37,9 @@ func NewApp() *cli.App {
 			withPlugins := ctx.StringSlice("with")
 			output := ctx.String("output")
 
-			return compilation.BuildRestQL(ctx.Context, withPlugins, output)
+			restqlVersion := ctx.Args().Get(0)
+
+			return compilation.BuildRestQL(ctx.Context, withPlugins, restqlVersion, output)
 		},
 	}
 }

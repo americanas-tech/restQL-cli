@@ -14,10 +14,9 @@ import (
 
 const (
 	restqlModulePath = "github.com/b2wdigital/restQL-golang"
-	restqlModuleVersion = ""
 )
 
-func BuildRestQL(ctx context.Context, pluginsInfo []string, output string) error {
+func BuildRestQL(ctx context.Context, pluginsInfo []string, restqlVersion string, output string) error {
 	absOutputFile, err := filepath.Abs(output)
 	if err != nil {
 		return err
@@ -28,12 +27,17 @@ func BuildRestQL(ctx context.Context, pluginsInfo []string, output string) error
 		plugins[i] = ParsePluginInfo(pi)
 	}
 
-	env := NewEnvironment(plugins, restqlModulePath, restqlModuleVersion)
+	env := NewEnvironment(plugins, restqlModulePath, restqlVersion)
 	err = env.Setup(ctx)
 	if err != nil {
 		return err
 	}
-	defer env.Clean()
+	defer func() {
+		cleanErr := env.Clean()
+		if cleanErr != nil {
+			LogError("An error occurred when cleaning: %v", cleanErr)
+		}
+	}()
 
 	err = runGoBuild(ctx, env, absOutputFile)
 	if err != nil {
