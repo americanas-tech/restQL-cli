@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"html/template"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -93,8 +94,8 @@ func (e *Environment) setupMainFile() error {
 }
 
 func (e *Environment) setupGoMod(ctx context.Context) error {
-	cmd := e.newCommand("go", "mod", "init", "restql")
-	err := e.runCommand(ctx, cmd, 1*time.Second)
+	cmd := e.NewCommand("go", "mod", "init", "restql")
+	err := e.RunCommand(ctx, cmd, ioutil.Discard)
 	if err != nil {
 		return err
 	}
@@ -108,11 +109,12 @@ func (e *Environment) setupDependenciesReplacements(ctx context.Context) error {
 			continue
 		}
 
+		//TODO: run absolute path of plugin.Replace
 		LogInfo("Replace dependency %s => %s", plugin.ModulePath, plugin.Replace)
 		replaceArg := fmt.Sprintf("%s=%s", plugin.ModulePath, plugin.Replace)
 
-		cmd := e.newCommand("go", "mod", "edit", "-replace", replaceArg)
-		err := e.runCommand(ctx, cmd, 1*time.Second)
+		cmd := e.NewCommand("go", "mod", "edit", "-replace", replaceArg)
+		err := e.RunCommand(ctx, cmd, ioutil.Discard)
 		if err != nil {
 			return err
 		}
@@ -124,6 +126,13 @@ func (e *Environment) setupDependenciesReplacements(ctx context.Context) error {
 func (e *Environment) setupDependenciesVersions(ctx context.Context) error {
 	LogInfo("Pinning versions")
 	err := e.execGoGet(ctx, restqlModulePath, restqlModuleVersion)
+	if err != nil {
+		return err
+	}
+
+	replaceArg := fmt.Sprintf("%s=%s", restqlModulePath, devRestqlPath)
+	cmd := e.NewCommand("go", "mod", "edit", "-replace", replaceArg)
+	err = e.RunCommand(ctx, cmd, ioutil.Discard)
 	if err != nil {
 		return err
 	}
@@ -143,26 +152,21 @@ func (e *Environment) execGoGet(ctx context.Context, modulePath, moduleVersion s
 	if moduleVersion != "" {
 		mod += "@" + moduleVersion
 	}
-	cmd := e.newCommand("go", "get", "-d", "-v", mod)
-	return e.runCommand(ctx, cmd, 0)
+	cmd := e.NewCommand("go", "get", "-d", "-v", mod)
+	return e.RunCommand(ctx, cmd, ioutil.Discard)
 }
 
-func (e *Environment) newCommand(command string, args ...string) *exec.Cmd {
+func (e *Environment) NewCommand(command string, args ...string) *exec.Cmd {
 	cmd := exec.Command(command, args...)
 	cmd.Dir = e.tempDir
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
 	return cmd
 }
 
-func (e *Environment) runCommand(ctx context.Context, cmd *exec.Cmd, timeout time.Duration) error {
-	LogInfo("Executing command (timeout=%s): %+v", timeout, cmd)
+func (e *Environment) RunCommand(ctx context.Context, cmd *exec.Cmd, out io.Writer) error {
+	LogInfo("Executing command: %+v", cmd)
 
-	if timeout > 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, timeout)
-		defer cancel()
-	}
+	cmd.Stdout = out
+	cmd.Stderr = os.Stderr
 
 	err := cmd.Start()
 	if err != nil {
