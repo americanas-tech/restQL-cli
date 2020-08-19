@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/b2wdigital/restQL-golang-cli/compilation"
+	"github.com/b2wdigital/restQL-golang-cli/restql"
 	"github.com/urfave/cli/v2"
 	"os"
 )
@@ -43,7 +43,32 @@ func NewApp() *cli.App {
 
 					restqlVersion := ctx.Args().Get(0)
 
-					return compilation.BuildRestQL(ctx.Context, withPlugins, restqlVersion, output)
+					return restql.Build(ctx.Context, withPlugins, restqlVersion, output)
+				},
+			},
+			{
+				Name: "run",
+				Usage: "Run RestQL with the plugin at working directory",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name: "config",
+						Aliases: []string{"c"},
+						Value: "./restql.yml",
+						Usage: "Set the location where the YAML configuration file is placed",
+					},
+					&cli.StringFlag{
+						Name: "plugin",
+						Aliases: []string{"p"},
+						Value: "./",
+						Usage: "Set the location of the plugin in development",
+					},
+				},
+				Action: func(ctx *cli.Context) error {
+					config := ctx.String("config")
+					pluginLocation := ctx.String("plugin")
+					restqlVersion := ctx.Args().Get(0)
+
+					return restql.Run(ctx.Context, config, pluginLocation, restqlVersion)
 				},
 			},
 		},

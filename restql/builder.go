@@ -1,4 +1,4 @@
-package compilation
+package restql
 
 import (
 	"bytes"
@@ -11,11 +11,7 @@ import (
 	"strings"
 )
 
-const (
-	restqlModulePath = "github.com/b2wdigital/restQL-golang"
-)
-
-func BuildRestQL(ctx context.Context, pluginsInfo []string, restqlVersion string, output string) error {
+func Build(ctx context.Context, pluginsInfo []string, restqlVersion string, output string) error {
 	absOutputFile, err := filepath.Abs(output)
 	if err != nil {
 		return err
@@ -26,7 +22,12 @@ func BuildRestQL(ctx context.Context, pluginsInfo []string, restqlVersion string
 		plugins[i] = ParsePluginInfo(pi)
 	}
 
-	env := NewEnvironment(plugins, restqlModulePath, restqlVersion)
+	tempDir, err := ioutil.TempDir("", "restql-compiling-*")
+	if err != nil {
+		return err
+	}
+	env := NewEnvironment(tempDir, plugins, restqlVersion)
+
 	err = env.Setup(ctx)
 	if err != nil {
 		return err
@@ -84,7 +85,7 @@ func setupBuildEnv() []string {
 
 func getRestqlVersion(ctx context.Context, env *Environment) (string, error) {
 	var out bytes.Buffer
-	cmd := env.NewCommand("go", "list", "-m", restqlModulePath)
+	cmd := env.NewCommand("go", "list", "-m", defaultRestqlModulePath)
 	err := env.RunCommand(ctx, cmd, &out)
 	if err != nil {
 		return "", err

@@ -1,4 +1,4 @@
-package compilation
+package restql
 
 import (
 	"bytes"
@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"time"
 )
+
+const defaultRestqlModulePath = "github.com/b2wdigital/restQL-golang"
 
 const mainFileTemplate = `
 package main
@@ -31,30 +33,65 @@ func main() {
 `
 
 type Environment struct {
-	tempDir string
-	restqlModulePath string
+	dir                 string
+	restqlModulePath    string
 	restqlModuleVersion string
-	plugins []Plugin
+	plugins             []Plugin
 }
 
-func NewEnvironment(plugins []Plugin, restqlModulePath string, restqlModuleVersion string) *Environment {
+func NewEnvironment(dir string, plugins []Plugin, restqlModuleVersion string) *Environment {
 	return &Environment{
-		plugins: plugins,
-		restqlModulePath: restqlModulePath,
+		dir: dir,
+		plugins:             plugins,
+		restqlModulePath:    defaultRestqlModulePath,
 		restqlModuleVersion: restqlModuleVersion,
 	}
 }
 
 func (e *Environment) Clean() error {
-	return os.RemoveAll(e.tempDir)
+	return os.RemoveAll(e.dir)
 }
 
-func (e *Environment) Setup(ctx context.Context) error {
-	tempDir, err := ioutil.TempDir("", "restql-compiling-*")
+func (e *Environment) NewCommand(command string, args ...string) *exec.Cmd {
+	cmd := exec.Command(command, args...)
+	cmd.Dir = e.dir
+	return cmd
+}
+
+func (e *Environment) RunCommand(ctx context.Context, cmd *exec.Cmd, out io.Writer) error {
+	LogInfo("Executing command: %+v", cmd)
+
+	cmd.Stdout = out
+	cmd.Stderr = os.Stderr
+
+	err := cmd.Start()
 	if err != nil {
 		return err
 	}
-	e.tempDir = tempDir
+
+	cmdErrChan := make(chan error)
+	go func() {
+		cmdErrChan <- cmd.Wait()
+	}()
+
+	select {
+	case cmdErr := <-cmdErrChan:
+		return cmdErr
+	case <-ctx.Done():
+		select {
+		case <-time.After(15 * time.Second):
+			cmd.Process.Kill()
+		case <-cmdErrChan:
+		}
+		return ctx.Err()
+	}
+}
+
+func (e *Environment) Setup(ctx context.Context) error {
+	err := e.initializeDir()
+	if err != nil {
+		return err
+	}
 
 	err = e.setupMainFile()
 	if err != nil {
@@ -79,13 +116,20 @@ func (e *Environment) Setup(ctx context.Context) error {
 	return nil
 }
 
+func (e *Environment) initializeDir() error {
+	if _, err := os.Stat(e.dir); os.IsNotExist(err) {
+		return os.Mkdir(e.dir, 0700)
+	}
+	return nil
+}
+
 func (e *Environment) setupMainFile() error {
 	mainFileContent, err := parseMainFileTemplate(e)
 	if err != nil {
 		return err
 	}
 
-	mainFilePath := filepath.Join(e.tempDir, "main.go")
+	mainFilePath := filepath.Join(e.dir, "main.go")
 	LogInfo("Writing main file to: %s", mainFilePath)
 	err = ioutil.WriteFile(mainFilePath, mainFileContent, 0644)
 	if err != nil {
@@ -156,41 +200,6 @@ func (e *Environment) execGoGet(ctx context.Context, modulePath, moduleVersion s
 	}
 	cmd := e.NewCommand("go", "get", "-d", "-v", mod)
 	return e.RunCommand(ctx, cmd, ioutil.Discard)
-}
-
-func (e *Environment) NewCommand(command string, args ...string) *exec.Cmd {
-	cmd := exec.Command(command, args...)
-	cmd.Dir = e.tempDir
-	return cmd
-}
-
-func (e *Environment) RunCommand(ctx context.Context, cmd *exec.Cmd, out io.Writer) error {
-	LogInfo("Executing command: %+v", cmd)
-
-	cmd.Stdout = out
-	cmd.Stderr = os.Stderr
-
-	err := cmd.Start()
-	if err != nil {
-		return err
-	}
-
-	cmdErrChan := make(chan error)
-	go func() {
-		cmdErrChan <- cmd.Wait()
-	}()
-
-	select {
-	case cmdErr := <-cmdErrChan:
-		return cmdErr
-	case <-ctx.Done():
-		select {
-		case <-time.After(15 * time.Second):
-			cmd.Process.Kill()
-		case <-cmdErrChan:
-		}
-		return ctx.Err()
-	}
 }
 
 func parseMainFileTemplate(e *Environment) ([]byte, error) {
