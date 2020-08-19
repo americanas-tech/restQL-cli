@@ -2,7 +2,6 @@ package restql
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -10,7 +9,7 @@ import (
 	"strings"
 )
 
-func Build(ctx context.Context, pluginsInfo []string, restqlVersion string, output string) error {
+func Build(pluginsInfo []string, restqlVersion string, output string) error {
 	absOutputFile, err := filepath.Abs(output)
 	if err != nil {
 		return err
@@ -27,7 +26,7 @@ func Build(ctx context.Context, pluginsInfo []string, restqlVersion string, outp
 	}
 	env := NewEnvironment(tempDir, plugins, restqlVersion)
 
-	err = env.Setup(ctx)
+	err = env.Setup()
 	if err != nil {
 		return err
 	}
@@ -38,7 +37,7 @@ func Build(ctx context.Context, pluginsInfo []string, restqlVersion string, outp
 		}
 	}()
 
-	err = runGoBuild(ctx, env, absOutputFile)
+	err = runGoBuild(env, absOutputFile)
 	if err != nil {
 		return err
 	}
@@ -46,8 +45,8 @@ func Build(ctx context.Context, pluginsInfo []string, restqlVersion string, outp
 	return nil
 }
 
-func runGoBuild(ctx context.Context, env *Environment, outputFile string) error {
-	restqlVersion, err := getRestqlVersion(ctx, env)
+func runGoBuild(env *Environment, outputFile string) error {
+	restqlVersion, err := getRestqlVersion(env)
 	if err != nil {
 		return err
 	}
@@ -59,7 +58,7 @@ func runGoBuild(ctx context.Context, env *Environment, outputFile string) error 
 		"-ldflags", fmt.Sprintf("-s -w -extldflags -static -X main.build=%s", restqlVersion),
 		"-tags", "netgo")
 
-	err = env.RunCommand(ctx, cmd, ioutil.Discard)
+	err = env.RunCommand(cmd, ioutil.Discard)
 	if err != nil {
 		return err
 	}
@@ -67,10 +66,10 @@ func runGoBuild(ctx context.Context, env *Environment, outputFile string) error 
 	return nil
 }
 
-func getRestqlVersion(ctx context.Context, env *Environment) (string, error) {
+func getRestqlVersion(env *Environment) (string, error) {
 	var out bytes.Buffer
 	cmd := env.NewCommand("go", "list", "-m", defaultRestqlModulePath)
-	err := env.RunCommand(ctx, cmd, &out)
+	err := env.RunCommand(cmd, &out)
 	if err != nil {
 		return "", err
 	}

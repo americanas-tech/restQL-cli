@@ -1,7 +1,6 @@
 package restql
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -9,7 +8,7 @@ import (
 	"strings"
 )
 
-func Run(ctx context.Context, restqlVersion string, configLocation string, pluginLocation string, race bool) error {
+func Run(restqlVersion string, configLocation string, pluginLocation string, race bool) error {
 	absPluginLocation, err := filepath.Abs(pluginLocation)
 	if err != nil {
 		return err
@@ -28,7 +27,7 @@ func Run(ctx context.Context, restqlVersion string, configLocation string, plugi
 
 	env := NewEnvironment(restqlEnvDir, []Plugin{pluginDirective}, restqlVersion)
 	if _, err := os.Stat(restqlEnvDir); os.IsNotExist(err) {
-		err = env.Setup(ctx)
+		err = env.Setup()
 		if err != nil {
 			return err
 		}
@@ -53,7 +52,7 @@ func Run(ctx context.Context, restqlVersion string, configLocation string, plugi
 		cmd.Args = append(cmd.Args, "-race")
 	}
 
-	err = env.RunCommand(ctx, cmd, os.Stdout)
+	err = env.RunCommand(cmd, os.Stdout)
 	if err != nil {
 		return err
 	}

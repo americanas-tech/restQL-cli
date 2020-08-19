@@ -2,7 +2,6 @@ package restql
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"html/template"
 	"io"
@@ -11,7 +10,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"time"
 )
 
 const defaultRestqlModulePath = "github.com/b2wdigital/restQL-golang"
@@ -97,36 +95,21 @@ func (e *Environment) NewCommand(command string, args ...string) *exec.Cmd {
 	return cmd
 }
 
-func (e *Environment) RunCommand(ctx context.Context, cmd *exec.Cmd, out io.Writer) error {
+func (e *Environment) RunCommand(cmd *exec.Cmd, out io.Writer) error {
 	LogInfo("Executing command: %+v", cmd)
 
 	cmd.Stdout = out
 	cmd.Stderr = os.Stderr
 
-	err := cmd.Start()
+	err := cmd.Run()
 	if err != nil {
 		return err
 	}
 
-	cmdErrChan := make(chan error)
-	go func() {
-		cmdErrChan <- cmd.Wait()
-	}()
-
-	select {
-	case cmdErr := <-cmdErrChan:
-		return cmdErr
-	case <-ctx.Done():
-		select {
-		case <-time.After(15 * time.Second):
-			cmd.Process.Kill()
-		case <-cmdErrChan:
-		}
-		return ctx.Err()
-	}
+	return nil
 }
 
-func (e *Environment) Setup(ctx context.Context) error {
+func (e *Environment) Setup() error {
 	err := e.initializeDir()
 	if err != nil {
 		return err
@@ -137,17 +120,17 @@ func (e *Environment) Setup(ctx context.Context) error {
 		return err
 	}
 
-	err = e.setupGoMod(ctx)
+	err = e.setupGoMod()
 	if err != nil {
 		return err
 	}
 
-	err = e.setupDependenciesReplacements(ctx)
+	err = e.setupDependenciesReplacements()
 	if err != nil {
 		return err
 	}
 
-	err = e.setupDependenciesVersions(ctx)
+	err = e.setupDependenciesVersions()
 	if err != nil {
 		return err
 	}
@@ -177,9 +160,9 @@ func (e *Environment) setupMainFile() error {
 	return nil
 }
 
-func (e *Environment) setupGoMod(ctx context.Context) error {
+func (e *Environment) setupGoMod() error {
 	cmd := e.NewCommand("go", "mod", "init", "restql")
-	err := e.RunCommand(ctx, cmd, ioutil.Discard)
+	err := e.RunCommand(cmd, ioutil.Discard)
 	if err != nil {
 		return err
 	}
@@ -187,7 +170,7 @@ func (e *Environment) setupGoMod(ctx context.Context) error {
 	return nil
 }
 
-func (e *Environment) setupDependenciesReplacements(ctx context.Context) error {
+func (e *Environment) setupDependenciesReplacements() error {
 	for _, plugin := range e.plugins {
 		if plugin.Replace == "" {
 			continue
@@ -202,7 +185,7 @@ func (e *Environment) setupDependenciesReplacements(ctx context.Context) error {
 		replaceArg := fmt.Sprintf("%s=%s", plugin.ModulePath, absReplacePath)
 
 		cmd := e.NewCommand("go", "mod", "edit", "-replace", replaceArg)
-		err = e.RunCommand(ctx, cmd, ioutil.Discard)
+		err = e.RunCommand(cmd, ioutil.Discard)
 		if err != nil {
 			return err
 		}
@@ -211,9 +194,9 @@ func (e *Environment) setupDependenciesReplacements(ctx context.Context) error {
 	return nil
 }
 
-func (e *Environment) setupDependenciesVersions(ctx context.Context) error {
+func (e *Environment) setupDependenciesVersions() error {
 	LogInfo("Pinning versions")
-	err := e.execGoGet(ctx, e.restqlModulePath, e.restqlModuleVersion)
+	err := e.execGoGet(e.restqlModulePath, e.restqlModuleVersion)
 	if err != nil {
 		return err
 	}
@@ -223,7 +206,7 @@ func (e *Environment) setupDependenciesVersions(ctx context.Context) error {
 			continue
 		}
 
-		err := e.execGoGet(ctx, plugin.ModulePath, plugin.Version)
+		err := e.execGoGet(plugin.ModulePath, plugin.Version)
 		if err != nil {
 			return err
 		}
@@ -232,13 +215,13 @@ func (e *Environment) setupDependenciesVersions(ctx context.Context) error {
 	return nil
 }
 
-func (e *Environment) execGoGet(ctx context.Context, modulePath, moduleVersion string) error {
+func (e *Environment) execGoGet(modulePath, moduleVersion string) error {
 	mod := modulePath
 	if moduleVersion != "" {
 		mod += "@" + moduleVersion
 	}
 	cmd := e.NewCommand("go", "get", "-d", "-v", mod)
-	return e.RunCommand(ctx, cmd, ioutil.Discard)
+	return e.RunCommand(cmd, ioutil.Discard)
 }
 
 func parseMainFileTemplate(e *Environment) ([]byte, error) {

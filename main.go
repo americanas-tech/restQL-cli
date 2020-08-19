@@ -43,7 +43,7 @@ func NewApp() *cli.App {
 
 					restqlVersion := ctx.Args().Get(0)
 
-					return restql.Build(ctx.Context, withPlugins, restqlVersion, output)
+					return restql.Build(withPlugins, restqlVersion, output)
 				},
 			},
 			{
@@ -74,7 +74,7 @@ func NewApp() *cli.App {
 					race := ctx.Bool("race")
 					restqlVersion := ctx.Args().Get(0)
 
-					return restql.Run(ctx.Context, restqlVersion, config, pluginLocation, race)
+					return restql.Run(restqlVersion, config, pluginLocation, race)
 				},
 			},
 		},
