@@ -1,7 +1,7 @@
 package restql
 
 import (
-	"github.com/b2wdigital/restQL-golang-cli/test"
+	"reflect"
 	"testing"
 )
 
@@ -53,7 +53,9 @@ func TestParsePluginInfo(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := ParsePluginInfo(tt.input)
-			test.Equal(t, got, tt.expected)
+			if !reflect.DeepEqual(got, tt.expected) {
+				t.Fatalf("got = %+#v, want = %+#v", got, tt.expected)
+			}
 		})
 	}
 }
