@@ -41,8 +41,8 @@ type Environment struct {
 
 func NewEnvironment(dir string, plugins []Plugin, restqlModuleVersion string) *Environment {
 	return &Environment{
-		dir: dir,
-		vars: os.Environ(),
+		dir:                 dir,
+		vars:                os.Environ(),
 		plugins:             plugins,
 		restqlModulePath:    defaultRestqlModulePath,
 		restqlModuleVersion: restqlModuleVersion,
@@ -58,7 +58,7 @@ func (e *Environment) Set(key string, value interface{}) {
 	newVar := fmt.Sprintf("%s=%v", key, value)
 
 	for i, v := range e.vars {
-		if strings.HasPrefix(prefix, v) {
+		if strings.HasPrefix(v, prefix) {
 			e.vars[i] = newVar
 			return
 		}
@@ -76,7 +76,7 @@ func (e *Environment) SetIfNotPresent(key string, value interface{}) {
 func (e *Environment) Get(key string) interface{} {
 	prefix := fmt.Sprintf("%s=", key)
 	for _, v := range e.vars {
-		if strings.HasPrefix(prefix, v) {
+		if strings.HasPrefix(v, prefix) {
 			return v
 		}
 	}
