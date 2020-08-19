@@ -34,47 +34,27 @@ func Run(ctx context.Context, configLocation string, pluginLocation string, rest
 		}
 	}
 
-	absConfigLocation, err := filepath.Abs(configLocation)
-	if err != nil {
-		return err
+	if configLocation != "" {
+		absConfigLocation, err := filepath.Abs(configLocation)
+		if err != nil {
+			return err
+		}
+
+		env.Set("RESTQL_CONFIG", absConfigLocation)
 	}
 
+	env.SetIfNotPresent("RESTQL_PORT", 9000)
+	env.SetIfNotPresent("RESTQL_HEALTH_PORT", 9001)
+	env.SetIfNotPresent("RESTQL_DEBUG_PORT", 9002)
+	env.SetIfNotPresent("RESTQL_ENV", "development")
+
 	cmd := env.NewCommand("go", "run", "main.go")
-	cmd.Env = setupRunningEnv(absConfigLocation)
 	err = env.RunCommand(ctx, cmd, os.Stdout)
 	if err != nil {
 		return err
 	}
 
 	return nil
-}
-
-func setupRunningEnv(config string) []string {
-	env := os.Environ()
-
-	env = setIfNotPresent(env, "RESTQL_PORT", 9000)
-	env = setIfNotPresent(env, "RESTQL_HEALTH_PORT", 9001)
-	env = setIfNotPresent(env, "RESTQL_DEBUG_PORT", 9002)
-	env = setIfNotPresent(env, "RESTQL_ENV", "development")
-
-	if config != "" {
-		for i, e := range env {
-			if strings.HasPrefix("RESTQL_CONFIG=", e) {
-				env[i] = fmt.Sprintf("RESTQL_CONFIG=%s", config)
-			}
-		}
-		env = setIfNotPresent(env, "RESTQL_CONFIG", config)
-	}
-
-	return env
-}
-
-func setIfNotPresent(env []string, key string, defaultValue interface{}) []string {
-	envVar := os.Getenv(key)
-	if envVar == "" {
-		return append(env, fmt.Sprintf("%s=%v", key, defaultValue))
-	}
-	return env
 }
 
 func getPlugin(pluginLocation string) (Plugin, error) {

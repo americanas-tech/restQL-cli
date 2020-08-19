@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"strings"
 )
@@ -53,11 +52,12 @@ func runGoBuild(ctx context.Context, env *Environment, outputFile string) error 
 		return err
 	}
 
+	env.SetIfNotPresent("GOOS", "linux")
+	env.SetIfNotPresent("CGO_ENABLED", 0)
 	cmd := env.NewCommand("go", "build",
 		"-o", outputFile,
 		"-ldflags", fmt.Sprintf("-s -w -extldflags -static -X main.build=%s", restqlVersion),
 		"-tags", "netgo")
-	cmd.Env = setupBuildEnv()
 
 	err = env.RunCommand(ctx, cmd, ioutil.Discard)
 	if err != nil {
@@ -65,22 +65,6 @@ func runGoBuild(ctx context.Context, env *Environment, outputFile string) error 
 	}
 
 	return nil
-}
-
-func setupBuildEnv() []string {
-	env := os.Environ()
-
-	goos := os.Getenv("GOOS")
-	if goos == "" {
-		env = append(env, "GOOS=linux")
-	}
-
-	cgo := os.Getenv("CGO_ENABLED")
-	if cgo == "" {
-		env = append(env, "CGO_ENABLED=0")
-	}
-
-	return env
 }
 
 func getRestqlVersion(ctx context.Context, env *Environment) (string, error) {

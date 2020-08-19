@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -34,6 +35,7 @@ func main() {
 
 type Environment struct {
 	dir                 string
+	vars []string
 	restqlModulePath    string
 	restqlModuleVersion string
 	plugins             []Plugin
@@ -42,6 +44,7 @@ type Environment struct {
 func NewEnvironment(dir string, plugins []Plugin, restqlModuleVersion string) *Environment {
 	return &Environment{
 		dir: dir,
+		vars: os.Environ(),
 		plugins:             plugins,
 		restqlModulePath:    defaultRestqlModulePath,
 		restqlModuleVersion: restqlModuleVersion,
@@ -52,9 +55,45 @@ func (e *Environment) Clean() error {
 	return os.RemoveAll(e.dir)
 }
 
+func (e *Environment) Set(key string, value interface{}) {
+	prefix := fmt.Sprintf("%s=", key)
+	newVar := fmt.Sprintf("%s=%v", key, value)
+
+	for i, v := range e.vars {
+		if strings.HasPrefix(prefix, v) {
+			e.vars[i] = newVar
+			return
+		}
+	}
+	e.vars = append(e.vars, newVar)
+}
+
+func (e *Environment) SetIfNotPresent(key string, value interface{}) {
+	envVar := e.Get(key)
+	if envVar == nil {
+		e.vars = append(e.vars, fmt.Sprintf("%s=%v", key, value))
+	}
+}
+
+func (e *Environment) Get(key string) interface{} {
+	prefix := fmt.Sprintf("%s=", key)
+	for _, v := range e.vars {
+		if strings.HasPrefix(prefix, v) {
+			return v
+		}
+	}
+
+	return nil
+}
+
+func (e *Environment) GetAll() []string {
+	return e.vars
+}
+
 func (e *Environment) NewCommand(command string, args ...string) *exec.Cmd {
 	cmd := exec.Command(command, args...)
 	cmd.Dir = e.dir
+	cmd.Env = e.vars
 	return cmd
 }
 
