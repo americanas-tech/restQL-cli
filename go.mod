@@ -1,4 +1,4 @@
-module github.com/b2wdigital/restQL-golang-cli
+module github.com/b2wdigital/restQL-cli
 
 go 1.14
 
