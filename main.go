@@ -62,13 +62,19 @@ func NewApp() *cli.App {
 						Value: "./",
 						Usage: "Set the location of the plugin in development",
 					},
+					&cli.BoolFlag{
+						Name: "race",
+						Value: false,
+						Usage: "Enable Go race detection",
+					},
 				},
 				Action: func(ctx *cli.Context) error {
 					config := ctx.String("config")
 					pluginLocation := ctx.String("plugin")
+					race := ctx.Bool("race")
 					restqlVersion := ctx.Args().Get(0)
 
-					return restql.Run(ctx.Context, config, pluginLocation, restqlVersion)
+					return restql.Run(ctx.Context, restqlVersion, config, pluginLocation, race)
 				},
 			},
 		},

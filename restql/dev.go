@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-func Run(ctx context.Context, configLocation string, pluginLocation string, restqlVersion string) error {
+func Run(ctx context.Context, restqlVersion string, configLocation string, pluginLocation string, race bool) error {
 	absPluginLocation, err := filepath.Abs(pluginLocation)
 	if err != nil {
 		return err
@@ -49,6 +49,10 @@ func Run(ctx context.Context, configLocation string, pluginLocation string, rest
 	env.SetIfNotPresent("RESTQL_ENV", "development")
 
 	cmd := env.NewCommand("go", "run", "main.go")
+	if race {
+		cmd.Args = append(cmd.Args, "-race")
+	}
+
 	err = env.RunCommand(ctx, cmd, os.Stdout)
 	if err != nil {
 		return err
