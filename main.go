@@ -7,6 +7,8 @@ import (
 	"os"
 )
 
+const defaultRestqlVersion = "v4.0.0"
+
 func main() {
 	app := NewApp()
 	if err := app.Run(os.Args); err != nil {
@@ -42,6 +44,9 @@ func NewApp() *cli.App {
 					output := ctx.String("output")
 
 					restqlVersion := ctx.Args().Get(0)
+					if restqlVersion == "" {
+						restqlVersion = defaultRestqlVersion
+					}
 
 					return restql.Build(withPlugins, restqlVersion, output)
 				},
@@ -72,7 +77,11 @@ func NewApp() *cli.App {
 					config := ctx.String("config")
 					pluginLocation := ctx.String("plugin")
 					race := ctx.Bool("race")
+
 					restqlVersion := ctx.Args().Get(0)
+					if restqlVersion == "" {
+						restqlVersion = defaultRestqlVersion
+					}
 
 					return restql.Run(restqlVersion, config, pluginLocation, race)
 				},

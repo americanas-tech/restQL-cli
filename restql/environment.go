@@ -3,12 +3,16 @@ package restql
 import (
 	"bytes"
 	"fmt"
+	"github.com/Masterminds/semver/v3"
 	"html/template"
 	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -216,7 +220,11 @@ func (e *Environment) setupDependenciesVersions() error {
 }
 
 func (e *Environment) execGoGet(modulePath, moduleVersion string) error {
-	mod := modulePath
+	mod, err := versionedModulePath(modulePath, moduleVersion)
+	if err != nil {
+		return err
+	}
+
 	if moduleVersion != "" {
 		mod += "@" + moduleVersion
 	}
@@ -224,13 +232,58 @@ func (e *Environment) execGoGet(modulePath, moduleVersion string) error {
 	return e.RunCommand(cmd, ioutil.Discard)
 }
 
+// versionedModulePath helps enforce Go Module's Semantic Import Versioning (SIV) by
+// returning the form of modulePath with the major component of moduleVersion added,
+// if > 1. For example, inputs of "foo" and "v1.0.0" will return "foo", but inputs
+// of "foo" and "v2.0.0" will return "foo/v2", for use in Go imports and go commands.
+// Inputs that conflict, like "foo/v2" and "v3.1.0" are an error. This function
+// returns the input if the moduleVersion is not a valid semantic version string.
+// If moduleVersion is empty string, the input modulePath is returned without error.
+func versionedModulePath(modulePath, moduleVersion string) (string, error) {
+	if moduleVersion == "" {
+		return modulePath, nil
+	}
+	ver, err := semver.StrictNewVersion(strings.TrimPrefix(moduleVersion, "v"))
+	if err != nil {
+		// only return the error if we know they were trying to use a semantic version
+		// (could have been a commit SHA or something)
+		if strings.HasPrefix(moduleVersion, "v") {
+			return "", fmt.Errorf("%s: %v", moduleVersion, err)
+		}
+		return modulePath, nil
+	}
+	major := ver.Major()
+
+	// see if the module path has a major version at the end (SIV)
+	matches := moduleVersionRegexp.FindStringSubmatch(modulePath)
+	if len(matches) == 2 {
+		modPathVer, err := strconv.Atoi(matches[1])
+		if err != nil {
+			return "", fmt.Errorf("this error should be impossible, but module path %s has bad version: %v", modulePath, err)
+		}
+		if modPathVer != int(major) {
+			return "", fmt.Errorf("versioned module path (%s) and requested module major version (%d) diverge", modulePath, major)
+		}
+	} else if major > 1 {
+		modulePath += fmt.Sprintf("/v%d", major)
+	}
+
+	return path.Clean(modulePath), nil
+}
+
+var moduleVersionRegexp = regexp.MustCompile(`.+/v(\d+)$`)
+
 func parseMainFileTemplate(e *Environment) ([]byte, error) {
 	p := make([]string, len(e.plugins))
 	for i, plugin := range e.plugins {
 		p[i] = plugin.ModulePath
 	}
 
-	templateContext := mainFileTemplateContext{Plugins: p, RestqlModulePath: e.restqlModulePath}
+	modPath, err := versionedModulePath(e.restqlModulePath, e.restqlModuleVersion)
+	if err != nil {
+		return nil, err
+	}
+	templateContext := mainFileTemplateContext{Plugins: p, RestqlModulePath: modPath}
 
 	tpl, err := template.New("main").Parse(mainFileTemplate)
 	if err != nil {

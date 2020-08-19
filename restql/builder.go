@@ -37,7 +37,7 @@ func Build(pluginsInfo []string, restqlVersion string, output string) error {
 		}
 	}()
 
-	err = runGoBuild(env, absOutputFile)
+	err = runGoBuild(env, restqlVersion, absOutputFile)
 	if err != nil {
 		return err
 	}
@@ -45,12 +45,7 @@ func Build(pluginsInfo []string, restqlVersion string, output string) error {
 	return nil
 }
 
-func runGoBuild(env *Environment, outputFile string) error {
-	restqlVersion, err := getRestqlVersion(env)
-	if err != nil {
-		return err
-	}
-
+func runGoBuild(env *Environment, restqlVersion string, outputFile string) error {
 	env.SetIfNotPresent("GOOS", "linux")
 	env.SetIfNotPresent("CGO_ENABLED", 0)
 	cmd := env.NewCommand("go", "build",
@@ -58,7 +53,7 @@ func runGoBuild(env *Environment, outputFile string) error {
 		"-ldflags", fmt.Sprintf("-s -w -extldflags -static -X main.build=%s", restqlVersion),
 		"-tags", "netgo")
 
-	err = env.RunCommand(cmd, ioutil.Discard)
+	err := env.RunCommand(cmd, ioutil.Discard)
 	if err != nil {
 		return err
 	}
