@@ -56,6 +56,11 @@ func NewApp() *cli.App {
 				Usage: "Run RestQL with the plugin at working directory",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
+						Name: "restql-replacement",
+						Value: "",
+						Usage: "Set the location of the restQL replacement module",
+					},
+					&cli.StringFlag{
 						Name: "config",
 						Aliases: []string{"c"},
 						Value: "./restql.yml",
@@ -74,6 +79,7 @@ func NewApp() *cli.App {
 					},
 				},
 				Action: func(ctx *cli.Context) error {
+					restqlReplacement := ctx.String("restql-replacement")
 					config := ctx.String("config")
 					pluginLocation := ctx.String("plugin")
 					race := ctx.Bool("race")
@@ -83,7 +89,7 @@ func NewApp() *cli.App {
 						restqlVersion = defaultRestqlVersion
 					}
 
-					return restql.Run(restqlVersion, config, pluginLocation, race)
+					return restql.Run(restqlReplacement, restqlVersion, config, pluginLocation, race)
 				},
 			},
 		},

@@ -40,6 +40,7 @@ type Environment struct {
 	vars []string
 	restqlModulePath    string
 	restqlModuleVersion string
+	restqlReplacement string
 	plugins             []Plugin
 }
 
@@ -90,6 +91,10 @@ func (e *Environment) Get(key string) interface{} {
 
 func (e *Environment) GetAll() []string {
 	return e.vars
+}
+
+func (e *Environment) UseRestqlReplacement(path string) {
+	e.restqlReplacement = path
 }
 
 func (e *Environment) NewCommand(command string, args ...string) *exec.Cmd {
@@ -175,6 +180,27 @@ func (e *Environment) setupGoMod() error {
 }
 
 func (e *Environment) setupDependenciesReplacements() error {
+	if e.restqlReplacement != "" {
+		absReplacePath, err := filepath.Abs(e.restqlReplacement)
+		if err != nil {
+			return err
+		}
+
+		restqlMod, err := versionedModulePath(e.restqlModulePath, e.restqlModuleVersion)
+		if err != nil {
+			return err
+		}
+
+		LogInfo("Replace dependency %s => %s", restqlMod, e.restqlReplacement)
+		replaceArg := fmt.Sprintf("%s=%s", restqlMod, absReplacePath)
+
+		cmd := e.NewCommand("go", "mod", "edit", "-replace", replaceArg)
+		err = e.RunCommand(cmd, ioutil.Discard)
+		if err != nil {
+			return err
+		}
+	}
+
 	for _, plugin := range e.plugins {
 		if plugin.Replace == "" {
 			continue
@@ -200,9 +226,11 @@ func (e *Environment) setupDependenciesReplacements() error {
 
 func (e *Environment) setupDependenciesVersions() error {
 	LogInfo("Pinning versions")
-	err := e.execGoGet(e.restqlModulePath, e.restqlModuleVersion)
-	if err != nil {
-		return err
+	if e.restqlReplacement == "" {
+		err := e.execGoGet(e.restqlModulePath, e.restqlModuleVersion)
+		if err != nil {
+			return err
+		}
 	}
 
 	for _, plugin := range e.plugins {

@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func Run(restqlVersion string, configLocation string, pluginLocation string, race bool) error {
+func Run(restqlReplacement string, restqlVersion string, configLocation string, pluginLocation string, race bool) error {
 	absPluginLocation, err := filepath.Abs(pluginLocation)
 	if err != nil {
 		return err
@@ -26,6 +26,10 @@ func Run(restqlVersion string, configLocation string, pluginLocation string, rac
 	restqlEnvDir := filepath.Join(currentDir, "/.restql-env")
 
 	env := NewEnvironment(restqlEnvDir, []Plugin{pluginDirective}, restqlVersion)
+	if restqlReplacement != "" {
+		env.UseRestqlReplacement(restqlReplacement)
+	}
+
 	if _, err := os.Stat(restqlEnvDir); os.IsNotExist(err) {
 		err = env.Setup()
 		if err != nil {
