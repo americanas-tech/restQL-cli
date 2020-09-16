@@ -6,22 +6,23 @@ import (
 	"path/filepath"
 )
 
+// Build generates a restQL binary using the given restQL version and the listed plugins.
 func Build(pluginsInfo []string, restqlVersion string, output string) error {
 	absOutputFile, err := filepath.Abs(output)
 	if err != nil {
 		return err
 	}
 
-	plugins := make([]Plugin, len(pluginsInfo))
+	plugins := make([]plugin, len(pluginsInfo))
 	for i, pi := range pluginsInfo {
-		plugins[i] = ParsePluginInfo(pi)
+		plugins[i] = parsePluginInfo(pi)
 	}
 
 	tempDir, err := ioutil.TempDir("", "restql-compiling-*")
 	if err != nil {
 		return err
 	}
-	env := NewEnvironment(tempDir, plugins, restqlVersion)
+	env := newEnvironment(tempDir, plugins, restqlVersion)
 
 	err = env.Setup()
 	if err != nil {
@@ -30,7 +31,7 @@ func Build(pluginsInfo []string, restqlVersion string, output string) error {
 	defer func() {
 		cleanErr := env.Clean()
 		if cleanErr != nil {
-			LogError("An error occurred when cleaning: %v", cleanErr)
+			logError("An error occurred when cleaning: %v", cleanErr)
 		}
 	}()
 
@@ -42,7 +43,7 @@ func Build(pluginsInfo []string, restqlVersion string, output string) error {
 	return nil
 }
 
-func runGoBuild(env *Environment, restqlVersion string, outputFile string) error {
+func runGoBuild(env *environment, restqlVersion string, outputFile string) error {
 	env.SetIfNotPresent("GOOS", "linux")
 	env.SetIfNotPresent("CGO_ENABLED", 0)
 	cmd := env.NewCommand("go", "build",

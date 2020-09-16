@@ -4,21 +4,21 @@ import "regexp"
 
 var pluginInfoRegex = regexp.MustCompile("([^@=]+)@?([^=]*)=?(.*)")
 
-type Plugin struct {
+type plugin struct {
 	ModulePath string
 	Version    string
 	Replace    string
 }
 
-func ParsePluginInfo(pluginInfo string) Plugin {
+func parsePluginInfo(pluginInfo string) plugin {
 	if pluginInfo == "" {
-		return Plugin{}
+		return plugin{}
 	}
 
-	p := Plugin{}
+	p := plugin{}
 	matches := pluginInfoRegex.FindAllStringSubmatch(pluginInfo, -1)
 	if len(matches) < 1 {
-		return Plugin{}
+		return plugin{}
 	}
 
 	submatches := matches[0]

@@ -35,17 +35,17 @@ func main() {
 }
 `
 
-type Environment struct {
+type environment struct {
 	dir                 string
-	vars []string
+	vars                []string
 	restqlModulePath    string
 	restqlModuleVersion string
-	restqlReplacement string
-	plugins             []Plugin
+	restqlReplacement   string
+	plugins             []plugin
 }
 
-func NewEnvironment(dir string, plugins []Plugin, restqlModuleVersion string) *Environment {
-	return &Environment{
+func newEnvironment(dir string, plugins []plugin, restqlModuleVersion string) *environment {
+	return &environment{
 		dir:                 dir,
 		vars:                os.Environ(),
 		plugins:             plugins,
@@ -54,11 +54,11 @@ func NewEnvironment(dir string, plugins []Plugin, restqlModuleVersion string) *E
 	}
 }
 
-func (e *Environment) Clean() error {
+func (e *environment) Clean() error {
 	return os.RemoveAll(e.dir)
 }
 
-func (e *Environment) Set(key string, value interface{}) {
+func (e *environment) Set(key string, value interface{}) {
 	prefix := fmt.Sprintf("%s=", key)
 	newVar := fmt.Sprintf("%s=%v", key, value)
 
@@ -71,14 +71,14 @@ func (e *Environment) Set(key string, value interface{}) {
 	e.vars = append(e.vars, newVar)
 }
 
-func (e *Environment) SetIfNotPresent(key string, value interface{}) {
+func (e *environment) SetIfNotPresent(key string, value interface{}) {
 	envVar := e.Get(key)
 	if envVar == nil {
 		e.vars = append(e.vars, fmt.Sprintf("%s=%v", key, value))
 	}
 }
 
-func (e *Environment) Get(key string) interface{} {
+func (e *environment) Get(key string) interface{} {
 	prefix := fmt.Sprintf("%s=", key)
 	for _, v := range e.vars {
 		if strings.HasPrefix(v, prefix) {
@@ -89,23 +89,23 @@ func (e *Environment) Get(key string) interface{} {
 	return nil
 }
 
-func (e *Environment) GetAll() []string {
+func (e *environment) GetAll() []string {
 	return e.vars
 }
 
-func (e *Environment) UseRestqlReplacement(path string) {
+func (e *environment) UseRestqlReplacement(path string) {
 	e.restqlReplacement = path
 }
 
-func (e *Environment) NewCommand(command string, args ...string) *exec.Cmd {
+func (e *environment) NewCommand(command string, args ...string) *exec.Cmd {
 	cmd := exec.Command(command, args...)
 	cmd.Dir = e.dir
 	cmd.Env = e.vars
 	return cmd
 }
 
-func (e *Environment) RunCommand(cmd *exec.Cmd, out io.Writer) error {
-	LogInfo("Executing command: %+v", cmd)
+func (e *environment) RunCommand(cmd *exec.Cmd, out io.Writer) error {
+	logInfo("Executing command: %+v", cmd)
 
 	cmd.Stdout = out
 	cmd.Stderr = os.Stderr
@@ -118,7 +118,7 @@ func (e *Environment) RunCommand(cmd *exec.Cmd, out io.Writer) error {
 	return nil
 }
 
-func (e *Environment) Setup() error {
+func (e *environment) Setup() error {
 	err := e.initializeDir()
 	if err != nil {
 		return err
@@ -147,21 +147,21 @@ func (e *Environment) Setup() error {
 	return nil
 }
 
-func (e *Environment) initializeDir() error {
+func (e *environment) initializeDir() error {
 	if _, err := os.Stat(e.dir); os.IsNotExist(err) {
 		return os.Mkdir(e.dir, 0700)
 	}
 	return nil
 }
 
-func (e *Environment) setupMainFile() error {
+func (e *environment) setupMainFile() error {
 	mainFileContent, err := parseMainFileTemplate(e)
 	if err != nil {
 		return err
 	}
 
 	mainFilePath := filepath.Join(e.dir, "main.go")
-	LogInfo("Writing main file to: %s", mainFilePath)
+	logInfo("Writing main file to: %s", mainFilePath)
 	err = ioutil.WriteFile(mainFilePath, mainFileContent, 0644)
 	if err != nil {
 		return err
@@ -169,7 +169,7 @@ func (e *Environment) setupMainFile() error {
 	return nil
 }
 
-func (e *Environment) setupGoMod() error {
+func (e *environment) setupGoMod() error {
 	cmd := e.NewCommand("go", "mod", "init", "restql")
 	err := e.RunCommand(cmd, ioutil.Discard)
 	if err != nil {
@@ -179,7 +179,7 @@ func (e *Environment) setupGoMod() error {
 	return nil
 }
 
-func (e *Environment) setupDependenciesReplacements() error {
+func (e *environment) setupDependenciesReplacements() error {
 	if e.restqlReplacement != "" {
 		absReplacePath, err := filepath.Abs(e.restqlReplacement)
 		if err != nil {
@@ -191,7 +191,7 @@ func (e *Environment) setupDependenciesReplacements() error {
 			return err
 		}
 
-		LogInfo("Replace dependency %s => %s", restqlMod, e.restqlReplacement)
+		logInfo("Replace dependency %s => %s", restqlMod, e.restqlReplacement)
 		replaceArg := fmt.Sprintf("%s=%s", restqlMod, absReplacePath)
 
 		cmd := e.NewCommand("go", "mod", "edit", "-replace", replaceArg)
@@ -211,7 +211,7 @@ func (e *Environment) setupDependenciesReplacements() error {
 			return err
 		}
 
-		LogInfo("Replace dependency %s => %s", plugin.ModulePath, plugin.Replace)
+		logInfo("Replace dependency %s => %s", plugin.ModulePath, plugin.Replace)
 		replaceArg := fmt.Sprintf("%s=%s", plugin.ModulePath, absReplacePath)
 
 		cmd := e.NewCommand("go", "mod", "edit", "-replace", replaceArg)
@@ -224,8 +224,8 @@ func (e *Environment) setupDependenciesReplacements() error {
 	return nil
 }
 
-func (e *Environment) setupDependenciesVersions() error {
-	LogInfo("Pinning versions")
+func (e *environment) setupDependenciesVersions() error {
+	logInfo("Pinning versions")
 	if e.restqlReplacement == "" {
 		err := e.execGoGet(e.restqlModulePath, e.restqlModuleVersion)
 		if err != nil {
@@ -247,7 +247,7 @@ func (e *Environment) setupDependenciesVersions() error {
 	return nil
 }
 
-func (e *Environment) execGoGet(modulePath, moduleVersion string) error {
+func (e *environment) execGoGet(modulePath, moduleVersion string) error {
 	mod, err := versionedModulePath(modulePath, moduleVersion)
 	if err != nil {
 		return err
@@ -301,7 +301,7 @@ func versionedModulePath(modulePath, moduleVersion string) (string, error) {
 
 var moduleVersionRegexp = regexp.MustCompile(`.+/v(\d+)$`)
 
-func parseMainFileTemplate(e *Environment) ([]byte, error) {
+func parseMainFileTemplate(e *environment) ([]byte, error) {
 	p := make([]string, len(e.plugins))
 	for i, plugin := range e.plugins {
 		p[i] = plugin.ModulePath
@@ -329,5 +329,5 @@ func parseMainFileTemplate(e *Environment) ([]byte, error) {
 
 type mainFileTemplateContext struct {
 	RestqlModulePath string
-	Plugins []string
+	Plugins          []string
 }

@@ -10,33 +10,33 @@ import (
 const defaultRestqlVersion = "v4.0.0"
 
 func main() {
-	app := NewApp()
+	app := newApp()
 	if err := app.Run(os.Args); err != nil {
 		fmt.Printf("[ERROR] failed to initialize RestQL CLI : %v", err)
 		os.Exit(1)
 	}
 }
 
-func NewApp() *cli.App {
+func newApp() *cli.App {
 	return &cli.App{
-		Name: "restql",
+		Name:  "restql",
 		Usage: "Manage the development and building of plugins within RestQL",
 		Commands: []*cli.Command{
 			{
-				Name: "build",
+				Name:  "build",
 				Usage: "Builds custom binaries for RestQL with the given plugins",
 				Flags: []cli.Flag{
 					&cli.StringSliceFlag{
-						Name: "with",
-						Aliases: []string{"w"},
+						Name:     "with",
+						Aliases:  []string{"w"},
 						Required: true,
-						Usage: "Specify the Go Module name of the plugin, can optionally set the version and a replace path: github.com/user/plugin[@version][=../replace/path]",
+						Usage:    "Specify the Go Module name of the plugin, can optionally set the version and a replace path: github.com/user/plugin[@version][=../replace/path]",
 					},
 					&cli.StringFlag{
-						Name: "output",
+						Name:    "output",
 						Aliases: []string{"o"},
-						Value: "./",
-						Usage: "Set the location where the final binary will be placed",
+						Value:   "./",
+						Usage:   "Set the location where the final binary will be placed",
 					},
 				},
 				Action: func(ctx *cli.Context) error {
@@ -52,28 +52,28 @@ func NewApp() *cli.App {
 				},
 			},
 			{
-				Name: "run",
+				Name:  "run",
 				Usage: "Run RestQL with the plugin at working directory",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
-						Name: "restql-replacement",
+						Name:  "restql-replacement",
 						Value: "",
 						Usage: "Set the location of the restQL replacement module",
 					},
 					&cli.StringFlag{
-						Name: "config",
+						Name:    "config",
 						Aliases: []string{"c"},
-						Value: "./restql.yml",
-						Usage: "Set the location where the YAML configuration file is placed",
+						Value:   "./restql.yml",
+						Usage:   "Set the location where the YAML configuration file is placed",
 					},
 					&cli.StringFlag{
-						Name: "plugin",
+						Name:    "plugin",
 						Aliases: []string{"p"},
-						Value: "./",
-						Usage: "Set the location of the plugin in development",
+						Value:   "./",
+						Usage:   "Set the location of the plugin in development",
 					},
 					&cli.BoolFlag{
-						Name: "race",
+						Name:  "race",
 						Value: false,
 						Usage: "Enable Go race detection",
 					},
@@ -93,6 +93,5 @@ func NewApp() *cli.App {
 				},
 			},
 		},
-
 	}
 }

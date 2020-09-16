@@ -6,27 +6,27 @@ import (
 )
 
 func TestParsePluginInfo(t *testing.T) {
-	tests := []struct{
+	tests := []struct {
 		name     string
 		input    string
-		expected Plugin
+		expected plugin
 	}{
 		{
 			"when given an empty string, return an empty plugin",
 			"",
-			Plugin{},
+			plugin{},
 		},
 		{
 			"when given an plugin info with only the module name return an plugin with it",
 			"github.com/user/plugin",
-			Plugin{
+			plugin{
 				ModulePath: "github.com/user/plugin",
 			},
 		},
 		{
 			"when given an plugin info with the module name and version return an plugin with they",
 			"github.com/user/plugin@1.9.0",
-			Plugin{
+			plugin{
 				ModulePath: "github.com/user/plugin",
 				Version:    "1.9.0",
 			},
@@ -34,7 +34,7 @@ func TestParsePluginInfo(t *testing.T) {
 		{
 			"when given an plugin info with the module name and replace path return an plugin with they",
 			"github.com/user/plugin=../replace/path",
-			Plugin{
+			plugin{
 				ModulePath: "github.com/user/plugin",
 				Replace:    "../replace/path",
 			},
@@ -42,7 +42,7 @@ func TestParsePluginInfo(t *testing.T) {
 		{
 			"when given an plugin info with the module name, version and replace path return an plugin with they",
 			"github.com/user/plugin@1.9.0=../replace/path",
-			Plugin{
+			plugin{
 				ModulePath: "github.com/user/plugin",
 				Version:    "1.9.0",
 				Replace:    "../replace/path",
@@ -52,7 +52,7 @@ func TestParsePluginInfo(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := ParsePluginInfo(tt.input)
+			got := parsePluginInfo(tt.input)
 			if !reflect.DeepEqual(got, tt.expected) {
 				t.Fatalf("got = %+#v, want = %+#v", got, tt.expected)
 			}
