@@ -1,12 +1,9 @@
 package restql
 
 import (
-	"bytes"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
-	"strings"
 )
 
 func Build(pluginsInfo []string, restqlVersion string, output string) error {
@@ -50,7 +47,7 @@ func runGoBuild(env *Environment, restqlVersion string, outputFile string) error
 	env.SetIfNotPresent("CGO_ENABLED", 0)
 	cmd := env.NewCommand("go", "build",
 		"-o", outputFile,
-		"-ldflags", fmt.Sprintf("-s -w -extldflags -static -X main.build=%s", restqlVersion),
+		"-ldflags", fmt.Sprintf("-s -w -extldflags -static -X github.com/b2wdigital/restQL-golang/v4/cmd.build=%s", restqlVersion),
 		"-tags", "netgo")
 
 	err := env.RunCommand(cmd, ioutil.Discard)
@@ -59,20 +56,4 @@ func runGoBuild(env *Environment, restqlVersion string, outputFile string) error
 	}
 
 	return nil
-}
-
-func getRestqlVersion(env *Environment) (string, error) {
-	var out bytes.Buffer
-	cmd := env.NewCommand("go", "list", "-m", defaultRestqlModulePath)
-	err := env.RunCommand(cmd, &out)
-	if err != nil {
-		return "", err
-	}
-
-	moduleNameAndVersion := strings.Split(out.String(), " ")
-	if len(moduleNameAndVersion) < 2 {
-		return "", errors.New("failed to fetch RestQL version from build environment")
-	}
-
-	return moduleNameAndVersion[1], nil
 }
