@@ -30,6 +30,8 @@ The `--config` flag indicates where the [RestQL YAML configuration file](https:/
 
 Alternatively, you can run this command from anywhere and point to the plugin with the `--plugin` flag.
 
+You can also replace the restQL source code used to spin up the instance using the `--restql-replacement` flag.
+
 In the first time it is run it will create a hidden directory `.restql-env` which will have set up for executing RestQL together with your plugin.
 
 If you make any changes to your plugin, just restart the command, it will pick-up the current version and avoid rebuilding the environment folder. 
