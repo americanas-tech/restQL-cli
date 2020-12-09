@@ -49,6 +49,8 @@ This will create a binary in the specified `output` path.
 
 The `--with` flag accepts a string with the format `github.com/user/plugin-a[@version][=path/to/replacement]`.
 
+You can also replace the restQL source code to be used with the `--restql-replacement` flag.
+
 ## License
 
 The [MIT license](https://mit-license.org/). See the LICENSE file.
