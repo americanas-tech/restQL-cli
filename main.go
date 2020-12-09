@@ -26,6 +26,11 @@ func newApp() *cli.App {
 				Name:  "build",
 				Usage: "Builds custom binaries for RestQL with the given plugins",
 				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:  "restql-replacement",
+						Value: "",
+						Usage: "Set the path to the local restQL codebase",
+					},
 					&cli.StringSliceFlag{
 						Name:     "with",
 						Aliases:  []string{"w"},
@@ -42,13 +47,14 @@ func newApp() *cli.App {
 				Action: func(ctx *cli.Context) error {
 					withPlugins := ctx.StringSlice("with")
 					output := ctx.String("output")
+					restqlReplacement := ctx.String("restql-replacement")
 
 					restqlVersion := ctx.Args().Get(0)
 					if restqlVersion == "" {
 						restqlVersion = defaultRestqlVersion
 					}
 
-					return restql.Build(withPlugins, restqlVersion, output)
+					return restql.Build(withPlugins, restqlVersion, restqlReplacement, output)
 				},
 			},
 			{
@@ -58,7 +64,7 @@ func newApp() *cli.App {
 					&cli.StringFlag{
 						Name:  "restql-replacement",
 						Value: "",
-						Usage: "Set the location of the restQL replacement module",
+						Usage: "Set the path to the local restQL codebase",
 					},
 					&cli.StringFlag{
 						Name:    "config",

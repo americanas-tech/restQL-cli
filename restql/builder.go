@@ -7,7 +7,7 @@ import (
 )
 
 // Build generates a restQL binary using the given restQL version and the listed plugins.
-func Build(pluginsInfo []string, restqlVersion string, output string) error {
+func Build(pluginsInfo []string, restqlVersion string, restqlReplacement string, output string) error {
 	absOutputFile, err := filepath.Abs(output)
 	if err != nil {
 		return err
@@ -23,6 +23,9 @@ func Build(pluginsInfo []string, restqlVersion string, output string) error {
 		return err
 	}
 	env := newEnvironment(tempDir, plugins, restqlVersion)
+	if restqlReplacement != "" {
+		env.UseRestqlReplacement(restqlReplacement)
+	}
 
 	err = env.Setup()
 	if err != nil {
