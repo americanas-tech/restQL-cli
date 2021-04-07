@@ -226,18 +226,12 @@ func (e *environment) setupDependenciesReplacements() error {
 
 func (e *environment) setupDependenciesVersions() error {
 	logInfo("Pinning versions")
-	if e.restqlReplacement == "" {
-		err := e.execGoGet(e.restqlModulePath, e.restqlModuleVersion)
-		if err != nil {
-			return err
-		}
+	err := e.execGoGet(e.restqlModulePath, e.restqlModuleVersion)
+	if err != nil {
+		return err
 	}
 
 	for _, plugin := range e.plugins {
-		if plugin.Replace != "" {
-			continue
-		}
-
 		err := e.execGoGet(plugin.ModulePath, plugin.Version)
 		if err != nil {
 			return err
