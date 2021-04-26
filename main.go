@@ -7,7 +7,7 @@ import (
 	"os"
 )
 
-const defaultRestqlVersion = "v4.0.0"
+const defaultRestqlVersion = "v6.2.0"
 
 func main() {
 	app := newApp()
