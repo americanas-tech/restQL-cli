@@ -51,7 +51,7 @@ func runGoBuild(env *environment, restqlVersion string, outputFile string) error
 	env.SetIfNotPresent("CGO_ENABLED", 0)
 	cmd := env.NewCommand("go", "build",
 		"-o", outputFile,
-		"-ldflags", fmt.Sprintf("-s -w -extldflags -static -X github.com/b2wdigital/restQL-golang/v4/cmd.build=%s", restqlVersion),
+		"-ldflags", fmt.Sprintf("-s -w -extldflags -static -X github.com/americanas-tech/restQL-golang/v4/cmd.build=%s", restqlVersion),
 		"-tags", "netgo")
 
 	err := env.RunCommand(cmd, ioutil.Discard)

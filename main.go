@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/b2wdigital/restQL-cli/restql"
+	"github.com/americanas-tech/restQL-cli/restql"
 	"github.com/urfave/cli/v2"
 	"os"
 )

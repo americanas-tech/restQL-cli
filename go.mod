@@ -1,4 +1,4 @@
-module github.com/b2wdigital/restQL-cli
+module github.com/americanas-tech/restQL-cli
 
 go 1.18
 

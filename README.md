@@ -1,6 +1,6 @@
 # RestQL CLI
 
-This command line tool makes it easy to develop plugins and build custom [RestQL](https://github.com/b2wdigital/restQL-golang) binaries with plugins linked.
+This command line tool makes it easy to develop plugins and build custom [RestQL](https://github.com/americanas-tech/restQL-golang) binaries with plugins linked.
 
 > Note: this tool only works with the Golang version of RestQL.
 
@@ -10,7 +10,7 @@ This command line tool makes it easy to develop plugins and build custom [RestQL
 ## Installation
 Provided you have Go correctly installed with the `$GOPATH` and `$GOBIN` environment variables set, run:
 ```shell script
-$ go get -u github.com/b2wdigital/restQL-cli
+$ go get -u github.com/americanas-tech/restQL-cli
 ```
 
 This will install or update the package, and the `restQL-cli` command will be installed in your `$GOBIN` directory.
