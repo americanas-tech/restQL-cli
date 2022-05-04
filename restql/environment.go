@@ -16,7 +16,7 @@ import (
 	"strings"
 )
 
-const defaultRestqlModulePath = "github.com/americanas-tech/restQL-golang"
+const defaultRestqlModulePath = "github.com/b2wdigital/restQL-golang"
 
 const mainFileTemplate = `
 package main
