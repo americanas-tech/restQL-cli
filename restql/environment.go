@@ -176,6 +176,12 @@ func (e *environment) setupGoMod() error {
 		return err
 	}
 
+	cmdTidy := e.NewCommand("go", "mod", "tidy")
+	err = e.RunCommand(cmdTidy, ioutil.Discard)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
