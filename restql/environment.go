@@ -3,7 +3,6 @@ package restql
 import (
 	"bytes"
 	"fmt"
-	"github.com/Masterminds/semver/v3"
 	"html/template"
 	"io"
 	"io/ioutil"
@@ -14,6 +13,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/Masterminds/semver/v3"
 )
 
 const defaultRestqlModulePath = "github.com/b2wdigital/restQL-golang"
@@ -171,13 +172,13 @@ func (e *environment) setupMainFile() error {
 
 func (e *environment) setupGoMod() error {
 	cmd := e.NewCommand("go", "mod", "init", "restql")
-	err := e.RunCommand(cmd, ioutil.Discard)
+	err := e.RunCommand(cmd, io.Discard)
 	if err != nil {
 		return err
 	}
 
 	cmdTidy := e.NewCommand("go", "mod", "tidy")
-	err = e.RunCommand(cmdTidy, ioutil.Discard)
+	err = e.RunCommand(cmdTidy, io.Discard)
 	if err != nil {
 		return err
 	}
@@ -201,7 +202,7 @@ func (e *environment) setupDependenciesReplacements() error {
 		replaceArg := fmt.Sprintf("%s=%s", restqlMod, absReplacePath)
 
 		cmd := e.NewCommand("go", "mod", "edit", "-replace", replaceArg)
-		err = e.RunCommand(cmd, ioutil.Discard)
+		err = e.RunCommand(cmd, io.Discard)
 		if err != nil {
 			return err
 		}
@@ -221,7 +222,7 @@ func (e *environment) setupDependenciesReplacements() error {
 		replaceArg := fmt.Sprintf("%s=%s", plugin.ModulePath, absReplacePath)
 
 		cmd := e.NewCommand("go", "mod", "edit", "-replace", replaceArg)
-		err = e.RunCommand(cmd, ioutil.Discard)
+		err = e.RunCommand(cmd, io.Discard)
 		if err != nil {
 			return err
 		}
@@ -257,7 +258,7 @@ func (e *environment) execGoGet(modulePath, moduleVersion string) error {
 		mod += "@" + moduleVersion
 	}
 	cmd := e.NewCommand("go", "get", "-d", "-v", mod)
-	return e.RunCommand(cmd, ioutil.Discard)
+	return e.RunCommand(cmd, io.Discard)
 }
 
 // versionedModulePath helps enforce Go Module's Semantic Import Versioning (SIV) by
