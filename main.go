@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/americanas-tech/restQL-cli/restql"
 	"github.com/urfave/cli/v2"
-	"os"
 )
 
 const defaultRestqlVersion = "v6.2.0"
